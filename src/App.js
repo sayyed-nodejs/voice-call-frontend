@@ -69,6 +69,7 @@ function App() {
     const filtered = online.filter(e => e !== me)
     setOnlineUsers(filtered)
     console.log('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me])
 
   const callUser = id => {
