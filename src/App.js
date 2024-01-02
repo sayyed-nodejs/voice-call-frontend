@@ -21,14 +21,16 @@ function App() {
   const [idToCall, setIdToCall] = useState('')
   const [callEnded, setCallEnded] = useState(false)
   const [name, setName] = useState('')
+  const [onlineUsers, setOnlineUsers] = useState([])
   const myAudio = useRef()
   const userAudio = useRef()
   const connectionRef = useRef()
-  const [ongoingCall, setOngoingCall] = useState(null)
 
   console.log('userAudio', userAudio)
   console.log('myAudio', myAudio)
+  console.log('connectionRef', connectionRef)
   console.log('stream', stream)
+  console.log('me', me)
 
   useEffect(() => {
     navigator.mediaDevices
@@ -46,21 +48,28 @@ function App() {
       setMe(id)
     })
 
-    console.log('socket', socket)
-
     socket.on('callUser', data => {
       setReceivingCall(true)
       setCaller(data.from)
       setName(data.name)
       setCallerSignal(data.signal)
-      setOngoingCall(true)
     })
 
     socket.on('callEnded', () => {
-      setOngoingCall(false)
       setReceivingCall(false)
     })
-  }, [])
+
+    socket.on('onlineUsers', users => {
+      setOnlineUsers(users.filter(user => user !== me))
+    })
+  }, [me])
+
+  useEffect(() => {
+    const online = [...onlineUsers]
+    const filtered = online.filter(e => e !== me)
+    setOnlineUsers(filtered)
+    console.log('')
+  }, [me])
 
   const callUser = id => {
     const peer = new Peer({
@@ -80,8 +89,6 @@ function App() {
       if (userAudio.current) userAudio.current.srcObject = stream
     })
     socket.on('callAccepted', signal => {
-      setCallAccepted(true)
-      setOngoingCall(true)
       peer.signal(signal)
     })
 
@@ -104,8 +111,6 @@ function App() {
 
     peer.signal(callerSignal)
     if (connectionRef.current) connectionRef.current = peer
-
-    setOngoingCall(true)
   }
 
   const leaveCall = () => {
@@ -113,91 +118,119 @@ function App() {
     if (connectionRef.current) connectionRef.current.destroy()
 
     console.log('call ended success', true)
-    setOngoingCall(false)
   }
 
   return (
     <>
-      <h1 style={{ textAlign: 'center', color: '#fff' }}>Caller</h1>
+      <h1 style={{ textAlign: 'center', color: '#fff' }}>Voice Caller App</h1>
       <div className="container">
-        <div className="video-container">
-          <div className="video">
-            {stream && (
-              <>
-                <audio
-                  playsInline
-                  muted
-                  ref={myAudio}
-                  autoPlay
-                  style={{ width: '300px' }}
-                />
-                {ongoingCall && <h1>Ongoing call</h1>}
-              </>
-            )}
-          </div>
-          <div className="video">
-            {callAccepted && !callEnded ? (
-              <>
-                <audio
-                  playsInline
-                  ref={userAudio}
-                  autoPlay
-                  style={{ width: '300px' }}
-                />
-              </>
-            ) : null}
-          </div>
-        </div>
-        <div className="myId">
-          <TextField
-            id="filled-basic"
-            label="Name"
-            variant="filled"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            style={{ marginBottom: '20px' }}
-          />
-          <CopyToClipboard text={me} style={{ marginBottom: '2rem' }}>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<AssignmentIcon fontSize="large" />}>
-              Copy ID
-            </Button>
-          </CopyToClipboard>
-
-          <TextField
-            id="filled-basic"
-            label="ID to call"
-            variant="filled"
-            value={idToCall}
-            onChange={e => setIdToCall(e.target.value)}
-          />
-          <div className="call-button">
-            {callAccepted && !callEnded ? (
-              <Button variant="contained" color="secondary" onClick={leaveCall}>
-                End Call
-              </Button>
-            ) : (
-              <IconButton
+        <div className="main-content">
+          <div className="myId">
+            <TextField
+              id="filled-basic"
+              label="Name"
+              variant="filled"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              style={{ marginBottom: '20px' }}
+            />
+            <CopyToClipboard text={me} style={{ marginBottom: '2rem' }}>
+              <Button
+                variant="contained"
                 color="primary"
-                aria-label="call"
-                onClick={() => callUser(idToCall)}>
-                <PhoneIcon fontSize="large" />
-              </IconButton>
-            )}
-            {idToCall}
-          </div>
-        </div>
-        <div>
-          {receivingCall && !callAccepted ? (
-            <div className="caller">
-              <h1>{name} is calling...</h1>
-              <Button variant="contained" color="primary" onClick={answerCall}>
-                Answer
+                startIcon={<AssignmentIcon fontSize="large" />}>
+                Copy ID
               </Button>
+            </CopyToClipboard>
+
+            <TextField
+              id="filled-basic"
+              label="ID to call"
+              variant="filled"
+              value={idToCall}
+              onChange={e => setIdToCall(e.target.value)}
+            />
+            <div className="call-button">
+              {callAccepted && !callEnded ? (
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={leaveCall}>
+                  End Call
+                </Button>
+              ) : (
+                <>
+                  <IconButton
+                    color="primary"
+                    aria-label="call"
+                    onClick={() => callUser(idToCall)}>
+                    <PhoneIcon fontSize="large" />
+                  </IconButton>
+                  <TextField
+                    id="filled-basic"
+                    label="ID to call"
+                    variant="filled"
+                    value={idToCall}
+                    onChange={e => setIdToCall(e.target.value)}
+                  />
+                  <div>
+                    <p>Online Users: {onlineUsers.length}</p>
+                    {onlineUsers.map(user => (
+                      <Button
+                        style={{ display: 'block' }}
+                        key={user}
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => callUser(user)}>
+                        {user}
+                      </Button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
-          ) : null}
+          </div>
+          <div>
+            {receivingCall && !callAccepted && (
+              <div className="caller">
+                <h1>{name} is calling...</h1>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={answerCall}>
+                  Answer
+                </Button>
+              </div>
+            )}
+
+            <div className="video-container">
+              <div className="video">
+                {stream && (
+                  <>
+                    <audio
+                      playsInline
+                      muted
+                      ref={myAudio}
+                      autoPlay
+                      style={{ width: '300px' }}
+                    />
+                  </>
+                )}
+              </div>
+              <div className="video">
+                {callAccepted && !callEnded ? (
+                  <>
+                    <audio
+                      playsInline
+                      ref={userAudio}
+                      autoPlay
+                      style={{ width: '300px' }}
+                    />
+                  </>
+                ) : null}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </>
