@@ -1,23 +1,10 @@
 .container {
-  width: 100%;
-  max-width: 90%;
-  margin: auto;
-
+  display: grid;
+  grid-template-columns: 7fr 3fr;
 }
-
-.main-content {
-  display: flex;
-  width: 100%;
-  justify-content: space-around;
-}
-
 
 .myId {
-  box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
-  width: 100%;
-  max-width: 40%;
-
-
+  margin-right: 5rem;
   border-radius: 5px;
   background: #c9d6ff;
   /* fallback for old browsers */
@@ -29,15 +16,17 @@
   /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
 
   padding: 2rem;
-  display: flex;
-  flex-direction: column;
+  display: grid;
   justify-content: center;
   align-content: center;
 }
 
+.text-center {
+  text-align: center;
+}
+
 .call-button {
   text-align: center;
-  margin-top: 2rem;
 }
 
 .video-container {
@@ -62,17 +51,4 @@ body {
   /* Chrome 10-25, Safari 5.1-6 */
   background: linear-gradient(to right, #feb47b, #ff7e5f);
   /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
-}
-
-
-@media only screen and (max-width: 767px) {
-  .main-content {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .myId {
-    width: auto;
-    max-width: none;
-  }
 }
