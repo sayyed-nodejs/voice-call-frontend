@@ -1,10 +1,8 @@
 import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
-import AssignmentIcon from '@mui/icons-material/Assignment'
 import PhoneIcon from '@mui/icons-material/Phone'
 import React, { useEffect, useRef, useState } from 'react'
-import { CopyToClipboard } from 'react-copy-to-clipboard'
 // import Peer from "simple-peer";
 import io from 'socket.io-client'
 import './App.css'
@@ -21,7 +19,6 @@ function App() {
   const [caller, setCaller] = useState('')
   const [callerSignal, setCallerSignal] = useState()
   const [callAccepted, setCallAccepted] = useState(false)
-  const [idToCall, setIdToCall] = useState('')
   const [callEnded, setCallEnded] = useState(false)
   const [name, setName] = useState('')
   const [namePresent, setNamePresent] = useState('')
@@ -95,6 +92,7 @@ function App() {
     })
 
     // socket.close()
+    // eslint-disable-next-line
   }, [])
 
   const callUser = () => {
@@ -194,6 +192,7 @@ function App() {
       setNamePresent(localStorage.getItem('userName'))
       setUserName()
     }
+    // eslint-disable-next-line
   }, [])
 
   useEffect(() => {
@@ -345,7 +344,6 @@ function App() {
                     </IconButton>
                   </>
                 )}
-                {idToCall}
               </div>
             </div>
             <div>
