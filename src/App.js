@@ -7,8 +7,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import io from 'socket.io-client'
 import './App.css'
 
-const socket = io.connect('https://voice-call-backend.onrender.com')
-// const socket = io.connect("http://localhost:5000");
+// const socket = io.connect('https://voice-call-backend.onrender.com')
+const socket = io.connect("http://localhost:5000");
 
 const Peer = window.SimplePeer
 
@@ -24,8 +24,6 @@ function App() {
   const [namePresent, setNamePresent] = useState('')
 
   console.log(name, 'name')
-  console.log(me, 'me')
-
   console.log(namePresent, 'namePresent')
   console.log(caller, 'caller')
 
@@ -79,18 +77,21 @@ function App() {
     })
 
     socket.on('callEnded', data => {
-      console.log(data,"dataincallended")
       console.log('Client: Call ended')
-      if (data?.id === me){
+      // if (data.to !== me){
+
         leaveCall()
-      }
+      // }
       setOngoingCall(false)
       setReceivingCall(false)
     })
 
     socket.on('callDeclined', () => {
       setReceivingCall(false)
-      setIsCalling(false)
+    })
+
+    socket.on('callDeclined', () => {
+      setIsCalling(false) // Update isCalling state when the call is declined
     })
 
     // socket.close()
@@ -100,7 +101,7 @@ function App() {
   const callUser = () => {
     setIsCalling(true)
 
-    const onlineUsersExceptMe = onlineUsers.filter(user => user.id !== me)
+    const onlineUsersExceptMe = onlineUsers.filter(user => user.id !== me && user.name !== null)
 
     if (onlineUsersExceptMe.length > 0) {
       // Select a random user from the list
@@ -199,8 +200,8 @@ function App() {
 
   useEffect(() => {
     if (onlineUsers) {
-      const onlineUsersExceptMe = onlineUsers.filter(user => user.id !== me)
-      setonlineUsersExceptMe(onlineUsersExceptMe)
+      const onlineUsersExceptMe = onlineUsers.filter(user => user.id !== me && user.name !== null);
+      setonlineUsersExceptMe(onlineUsersExceptMe);
     }
   }, [onlineUsers, me])
 
