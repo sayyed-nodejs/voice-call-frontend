@@ -34,7 +34,7 @@ function App() {
   const [onlineUsers, setonlineUsers] = useState(null)
   const [onlineUsersExceptMe, setonlineUsersExceptMe] = useState([])
   const [isCalling, setIsCalling] = useState(false)
-  const [callerName, setCallerName] = useState('')
+  const [, setCallerName] = useState('')
   console.log('isCalling', isCalling)
   console.log('onlineUsersExceptMe', onlineUsersExceptMe.length)
 
@@ -213,6 +213,7 @@ function App() {
       {namePresent === '' || namePresent === null ? (
         <>
           <div className="container">
+            <div className='main-box'>
             <div className="myId">
               <TextField
                 id="filled-basic"
@@ -237,14 +238,15 @@ function App() {
               </div>
             </div>
             <div>
-              {receivingCall && !callAccepted ? (
+              {/* {receivingCall && !callAccepted ? (
                 <div className="caller">
-                  <h1>{callerName} is calling...</h1>
+                  <h1>
+                     incoming call</h1>
                   <Button
                     variant="contained"
                     color="primary"
                     onClick={answerCall}>
-                    Answers
+                    Answer
                   </Button>
 
                   <Button
@@ -254,15 +256,16 @@ function App() {
                     Decline
                   </Button>
                 </div>
-              ) : null}
+              ) : null} */}
+            </div>
             </div>
           </div>
         </>
       ) : (
         <>
           <div className="container">
+          <div className='main-box'>
             <div className="video-container">
-              <div className="video">
                 {stream && (
                   <>
                     <audio
@@ -275,8 +278,6 @@ function App() {
                     {ongoingCall && <h1>Ongoing call</h1>}
                   </>
                 )}
-              </div>
-              <div className="video">
                 {callAccepted && !callEnded ? (
                   <>
                     <audio
@@ -287,7 +288,6 @@ function App() {
                     />
                   </>
                 ) : null}
-              </div>
             </div>
             <div className="myId">
               <TextField
@@ -354,13 +354,13 @@ function App() {
                 <div className="caller">
                   <h1>
                     {/* {callerName}  */}
-                    is calling...
+                    incoming calls
                   </h1>
                   <Button
                     variant="contained"
                     color="primary"
                     onClick={answerCall}>
-                    Answers
+                    Answer
                   </Button>
 
                   <Button
@@ -371,6 +371,7 @@ function App() {
                   </Button>
                 </div>
               ) : null}
+            </div>
             </div>
           </div>
         </>
