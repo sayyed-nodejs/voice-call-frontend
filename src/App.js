@@ -90,10 +90,7 @@ function App() {
 
     socket.on('callDeclined', () => {
       setReceivingCall(false)
-    })
-
-    socket.on('callDeclined', () => {
-      setIsCalling(false) // Update isCalling state when the call is declined
+      setIsCalling(false)
     })
 
     // socket.close()
