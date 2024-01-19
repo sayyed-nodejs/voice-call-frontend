@@ -7,8 +7,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import io from 'socket.io-client'
 import './App.css'
 
-const socket = io.connect('https://voice-call-backend.onrender.com')
-// const socket = io.connect("http://localhost:5000");
+// const socket = io.connect('https://voice-call-backend.onrender.com')
+const socket = io.connect("http://localhost:5000");
 
 const Peer = window.SimplePeer
 
@@ -24,6 +24,8 @@ function App() {
   const [namePresent, setNamePresent] = useState('')
 
   console.log(name, 'name')
+  console.log(me, 'me')
+
   console.log(namePresent, 'namePresent')
   console.log(caller, 'caller')
 
@@ -76,9 +78,12 @@ function App() {
       setonlineUsers(data)
     })
 
-    socket.on('callEnded', () => {
+    socket.on('callEnded', data => {
+      console.log(data,"dataincallended")
       console.log('Client: Call ended')
-      leaveCall()
+      if (data?.id === me){
+        leaveCall()
+      }
       setOngoingCall(false)
       setReceivingCall(false)
     })
@@ -171,7 +176,7 @@ function App() {
   }
 
   const leaveCall = () => {
-    socket.emit('callEnded', { to: caller })
+    // socket.emit('callEnded', { to: caller })
     setCallEnded(true)
     connectionRef.current?.destroy()
     setTimeout(() => {
