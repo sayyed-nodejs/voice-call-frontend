@@ -7,8 +7,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import io from 'socket.io-client'
 import './App.css'
 
-// const socket = io.connect('https://voice-call-backend.onrender.com')
-const socket = io.connect("http://localhost:5000");
+const socket = io.connect('https://voice-call-backend.onrender.com')
+// const socket = io.connect("http://localhost:5000");
 
 const Peer = window.SimplePeer
 
