@@ -3,14 +3,14 @@ import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import PhoneIcon from '@mui/icons-material/Phone'
 import React, { useEffect, useRef, useState } from 'react'
-// import Peer from "simple-peer";
+import Peer from 'simple-peer'
 import io from 'socket.io-client'
 import './App.css'
 
 const socket = io.connect('https://voice-call-backend.onrender.com')
-// const socket = io.connect("http://localhost:5000");
+// const socket = io.connect('http://localhost:4000')
 
-const Peer = window.SimplePeer
+// const Peer = window.SimplePeer
 
 function App() {
   const [me, setMe] = useState('')
@@ -80,7 +80,9 @@ function App() {
       console.log('Client: Call ended')
       // if (data.to !== me){
 
-        leaveCall()
+      console.log(' data in call ended', data)
+
+      leaveCall()
       // }
       setOngoingCall(false)
       setReceivingCall(false)
@@ -101,7 +103,9 @@ function App() {
   const callUser = () => {
     setIsCalling(true)
 
-    const onlineUsersExceptMe = onlineUsers.filter(user => user.id !== me && user.name !== null)
+    const onlineUsersExceptMe = onlineUsers.filter(
+      user => user.id !== me && user.name !== null
+    )
 
     if (onlineUsersExceptMe.length > 0) {
       // Select a random user from the list
@@ -109,6 +113,8 @@ function App() {
         onlineUsersExceptMe[
           Math.floor(Math.random() * onlineUsersExceptMe.length)
         ]
+
+      setCaller(randomUser.id)
 
       const peer = new Peer({
         initiator: true,
@@ -121,7 +127,7 @@ function App() {
           userToCall: randomUser.id,
           signalData: data,
           from: me,
-          name: name,
+          name: name || namePresent,
         })
       })
 
@@ -151,7 +157,7 @@ function App() {
       stream: stream,
     })
     peer.on('signal', data => {
-      socket.emit('answerCall', { signal: data, to: caller })
+      socket.emit('answerCall', { signal: data, to: caller, from: me })
     })
     peer.on('stream', stream => {
       if (userAudio.current) userAudio.current.srcObject = stream
@@ -174,9 +180,10 @@ function App() {
   }
 
   const leaveCall = () => {
-    // socket.emit('callEnded', { to: caller })
+    socket.emit('callEnded', { to: caller })
     setCallEnded(true)
     connectionRef.current?.destroy()
+
     setTimeout(() => {
       window.location.reload()
     }, 1000)
@@ -200,8 +207,10 @@ function App() {
 
   useEffect(() => {
     if (onlineUsers) {
-      const onlineUsersExceptMe = onlineUsers.filter(user => user.id !== me && user.name !== null);
-      setonlineUsersExceptMe(onlineUsersExceptMe);
+      const onlineUsersExceptMe = onlineUsers.filter(
+        user => user.id !== me && user.name !== null
+      )
+      setonlineUsersExceptMe(onlineUsersExceptMe)
     }
   }, [onlineUsers, me])
 
@@ -213,32 +222,32 @@ function App() {
       {namePresent === '' || namePresent === null ? (
         <>
           <div className="container">
-            <div className='main-box'>
-            <div className="myId">
-              <TextField
-                id="filled-basic"
-                label="Name"
-                variant="filled"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                style={{ marginBottom: '20px' }}
-              />
+            <div className="main-box">
+              <div className="myId">
+                <TextField
+                  id="filled-basic"
+                  label="Name"
+                  variant="filled"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  style={{ marginBottom: '20px' }}
+                />
 
-              <div className="call-button">
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  onClick={() => {
-                    setNamePresent(name)
-                    setUserName()
-                    localStorage.setItem('userName', name)
-                  }}>
-                  Submit
-                </Button>
+                <div className="call-button">
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    onClick={() => {
+                      setNamePresent(name)
+                      setUserName()
+                      localStorage.setItem('userName', name)
+                    }}>
+                    Submit
+                  </Button>
+                </div>
               </div>
-            </div>
-            <div>
-              {/* {receivingCall && !callAccepted ? (
+              <div>
+                {/* {receivingCall && !callAccepted ? (
                 <div className="caller">
                   <h1>
                      incoming call</h1>
@@ -257,15 +266,15 @@ function App() {
                   </Button>
                 </div>
               ) : null} */}
-            </div>
+              </div>
             </div>
           </div>
         </>
       ) : (
         <>
           <div className="container">
-          <div className='main-box'>
-            <div className="video-container">
+            <div className="main-box">
+              <div className="video-container">
                 {stream && (
                   <>
                     <audio
@@ -288,17 +297,17 @@ function App() {
                     />
                   </>
                 ) : null}
-            </div>
-            <div className="myId">
-              <TextField
-                id="filled-basic"
-                label="Name"
-                variant="filled"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                style={{ marginBottom: '20px' }}
-              />
-              {/* <CopyToClipboard text={me} style={{ marginBottom: "2rem" }}>
+              </div>
+              <div className="myId">
+                <TextField
+                  id="filled-basic"
+                  label="Name"
+                  variant="filled"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  style={{ marginBottom: '20px' }}
+                />
+                {/* <CopyToClipboard text={me} style={{ marginBottom: "2rem" }}>
                 <Button
                   variant="contained"
                   color="primary"
@@ -308,70 +317,70 @@ function App() {
                 </Button>
               </CopyToClipboard> */}
 
-              {/* <TextField
+                {/* <TextField
                 id="filled-basic"
                 label="ID to call"
                 variant="filled"
                 value={idToCall}
                 onChange={(e) => setIdToCall(e.target.value)}
               /> */}
-              <span className="text-center">
-                Online members: {onlineUsersExceptMe.length}
-              </span>
-              <div className="call-button">
-                {/* Display online members count */}
+                <span className="text-center">
+                  Online members: {onlineUsersExceptMe.length}
+                </span>
+                <div className="call-button">
+                  {/* Display online members count */}
 
-                {callAccepted && !callEnded ? (
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={leaveCall}>
-                    End Call
-                  </Button>
-                ) : (
-                  <>
-                    <IconButton
-                      color="primary"
-                      aria-label="call"
-                      onClick={() => callUser()}>
-                      {isCalling ? (
-                        // Display a different icon or text when calling
-                        // For example, you can use a CircularProgress or other icon
-                        <>Calling...</>
-                      ) : (
-                        <>
-                          <PhoneIcon fontSize="large" />
-                          <p>Call</p>
-                        </>
-                      )}
-                    </IconButton>
-                  </>
-                )}
-              </div>
-            </div>
-            <div>
-              {receivingCall && !callAccepted ? (
-                <div className="caller">
-                  <h1>
-                    {/* {callerName}  */}
-                    incoming calls
-                  </h1>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={answerCall}>
-                    Answer
-                  </Button>
-
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={declineCall}>
-                    Decline
-                  </Button>
+                  {callAccepted && !callEnded ? (
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      onClick={leaveCall}>
+                      End Call
+                    </Button>
+                  ) : (
+                    <>
+                      <IconButton
+                        color="primary"
+                        aria-label="call"
+                        onClick={() => callUser()}>
+                        {isCalling ? (
+                          // Display a different icon or text when calling
+                          // For example, you can use a CircularProgress or other icon
+                          <>Calling...</>
+                        ) : (
+                          <>
+                            <PhoneIcon fontSize="large" />
+                            <p>Call</p>
+                          </>
+                        )}
+                      </IconButton>
+                    </>
+                  )}
                 </div>
-              ) : null}
-            </div>
+              </div>
+              <div>
+                {receivingCall && !callAccepted ? (
+                  <div className="caller">
+                    <h1>
+                      {/* {callerName}  */}
+                      incoming calls
+                    </h1>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={answerCall}>
+                      Answer
+                    </Button>
+
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      onClick={declineCall}>
+                      Decline
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
         </>
