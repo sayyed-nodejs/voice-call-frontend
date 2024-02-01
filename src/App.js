@@ -1,4 +1,3 @@
-import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import PhoneIcon from '@mui/icons-material/Phone'
@@ -8,383 +7,154 @@ import io from 'socket.io-client'
 import './App.css'
 
 const socket = io.connect('https://voice-call-backend.onrender.com')
-// const socket = io.connect('http://localhost:4000')
+// const socket = io.connect('http://localhost:4500')
 
 // const Peer = window.SimplePeer
 
 function App() {
   const [me, setMe] = useState('')
-  const [stream, setStream] = useState()
-  const [receivingCall, setReceivingCall] = useState(false)
-  const [caller, setCaller] = useState('')
-  const [callerSignal, setCallerSignal] = useState()
-  const [callAccepted, setCallAccepted] = useState(false)
-  const [callEnded, setCallEnded] = useState(false)
-  const [name, setName] = useState('')
-  const [namePresent, setNamePresent] = useState('')
 
-  console.log(name, 'name')
-  console.log(namePresent, 'namePresent')
-  console.log(caller, 'caller')
+  const [calling, setCalling] = useState(false)
 
-  const myAudio = useRef()
-  const userAudio = useRef()
-  const connectionRef = useRef()
-  const [ongoingCall, setOngoingCall] = useState(null)
-  const [onlineUsers, setonlineUsers] = useState(null)
-  const [onlineUsersExceptMe, setonlineUsersExceptMe] = useState([])
+  const [localStream, setLocalStream] = useState()
+  const [ongoingCall, setOngoingCall] = useState(false)
+  const remoteAudioRef = useRef()
+
+  console.log('remoteAudioRef', remoteAudioRef)
+
   const [isCalling, setIsCalling] = useState(false)
-  const [, setCallerName] = useState('')
-  console.log('isCalling', isCalling)
-  console.log('onlineUsersExceptMe', onlineUsersExceptMe.length)
 
-  console.log('myAudio', myAudio)
-  console.log('stream', stream)
-  console.log('onlineUsers', onlineUsers)
-  console.log('receivingCall', receivingCall)
-  console.log('callAccepted', callAccepted)
+  console.log('me', me)
+
+  const handleCallClick = () => {
+    socket.emit('call')
+
+    setIsCalling(true)
+  }
 
   useEffect(() => {
     navigator.mediaDevices
       .getUserMedia({ audio: true })
       .then(stream => {
-        setStream(stream)
-        if (myAudio.current) myAudio.current.srcObject = stream
+        setLocalStream(stream)
       })
-      .catch(err => {
-        console.warn('err', err)
+      .catch(error => {
+        console.error('Error accessing user media:', error)
       })
 
-    socket.on('me', ({ id, name }) => {
-      console.log('socketId', id)
+    socket.on('me', ({ id }) => {
       setMe(id)
-      setName(name)
     })
-
-    console.log('socket', socket)
-
-    socket.on('callUser', data => {
-      setReceivingCall(true)
-      setCaller(data.from)
-      setCallerName(data.name)
-      setCallerSignal(data.signal)
-      setOngoingCall(true)
-    })
-
-    socket.on('onlineUsers', data => {
-      console.log(data, 'datadata')
-      setonlineUsers(data)
-    })
-
-    socket.on('callEnded', data => {
-      console.log('Client: Call ended')
-      // if (data.to !== me){
-
-      console.log(' data in call ended', data)
-
-      leaveCall()
-      // }
-      setOngoingCall(false)
-      setReceivingCall(false)
-    })
-
-    socket.on('callDeclined', () => {
-      setReceivingCall(false)
-    })
-
-    socket.on('callDeclined', () => {
-      setIsCalling(false) // Update isCalling state when the call is declined
-    })
-
-    // socket.close()
-    // eslint-disable-next-line
   }, [])
 
-  const callUser = () => {
-    setIsCalling(true)
+  useEffect(() => {
+    // Listen for the "startCall" event from the server
+    if (localStream) {
+      socket.on('startCall', otherUserId => {
+        console.log(`Starting call with:${otherUserId} by me ${me}`)
+        // Initialize simple-peer with socket.io
+        const peer = new Peer({
+          initiator: true,
+          trickle: false,
+          stream: localStream,
+        })
 
-    const onlineUsersExceptMe = onlineUsers.filter(
-      user => user.id !== me && user.name !== null
-    )
+        console.log('peer.destroyed', peer.destroyed)
 
-    if (onlineUsersExceptMe.length > 0) {
-      // Select a random user from the list
-      const randomUser =
-        onlineUsersExceptMe[
-          Math.floor(Math.random() * onlineUsersExceptMe.length)
-        ]
+        peer.on('error', err => console.log('peer error', err))
 
-      setCaller(randomUser.id)
+        peer.on('signal', data => {
+          console.log('SIGNAL inside peer', JSON.stringify(data))
+          // Send signal to the other user
+          socket.emit('signal', { signal: data, to: otherUserId })
+        })
 
-      const peer = new Peer({
-        initiator: true,
-        trickle: false,
-        stream: stream,
-      })
+        peer._debug = console.log
 
-      peer.on('signal', data => {
-        socket.emit('callUser', {
-          userToCall: randomUser.id,
-          signalData: data,
-          from: me,
-          name: name || namePresent,
+        // Handle incoming signal from the other user
+        socket.on('signal', data => {
+          console.log('SIGNAL inside socket', JSON.stringify(data))
+
+          if (data.from === otherUserId && data.signal) {
+            peer.signal(data.signal)
+          }
+        })
+
+        // Handle connection established
+        peer.on('connect', () => {
+          console.log('Connection established')
+          // Now you can start sending and receiving data
+        })
+
+        peer.on('close', () => {
+          console.log('peer closed')
+        })
+
+        // Listen for remote audio stream
+        peer.on('stream', stream => {
+          console.log('peer.on stream', stream)
+          if (remoteAudioRef.current) remoteAudioRef.current.srcObject = stream
         })
       })
-
-      peer.on('stream', stream => {
-        if (userAudio.current) userAudio.current.srcObject = stream
-      })
-
-      console.log(onlineUsersExceptMe, 'onlineUsersExceptMe')
-
-      socket.on('callAccepted', signal => {
-        setCallAccepted(true)
-        setOngoingCall(true)
-        setIsCalling(false)
-        peer.signal(signal)
-      })
-
-      // You might want to add a state variable or some indication that a call is in progress
-      // setCalling(true);
     }
-  }
-
-  const answerCall = () => {
-    setCallAccepted(true)
-    const peer = new Peer({
-      initiator: false,
-      trickle: false,
-      stream: stream,
-    })
-    peer.on('signal', data => {
-      socket.emit('answerCall', { signal: data, to: caller, from: me })
-    })
-    peer.on('stream', stream => {
-      if (userAudio.current) userAudio.current.srcObject = stream
-    })
-
-    peer.signal(callerSignal)
-    if (connectionRef.current) connectionRef.current = peer
-
-    setOngoingCall(true)
-  }
-
-  const declineCall = () => {
-    setReceivingCall(false)
-    setCaller('')
-    setCallerSignal(null)
-    setCallAccepted(false)
-    setOngoingCall(false)
-    // Notify the server that the call has been declined
-    socket.emit('callDeclined', { to: caller })
-  }
-
-  const leaveCall = () => {
-    socket.emit('callEnded', { to: caller })
-    setCallEnded(true)
-    connectionRef.current?.destroy()
-
-    setTimeout(() => {
-      window.location.reload()
-    }, 1000)
-    console.log('call ended success', true)
-    setOngoingCall(false)
-    setCallAccepted(false)
-  }
-
-  const setUserName = () => {
-    socket.emit('setUserName', name || localStorage.getItem('userName'))
-  }
-
-  useEffect(() => {
-    if (localStorage.getItem('userName')) {
-      setName(localStorage.getItem('userName'))
-      setNamePresent(localStorage.getItem('userName'))
-      setUserName()
-    }
-    // eslint-disable-next-line
-  }, [])
-
-  useEffect(() => {
-    if (onlineUsers) {
-      const onlineUsersExceptMe = onlineUsers.filter(
-        user => user.id !== me && user.name !== null
-      )
-      setonlineUsersExceptMe(onlineUsersExceptMe)
-    }
-  }, [onlineUsers, me])
+  }, [localStream])
 
   return (
     <>
       <h1 style={{ textAlign: 'center', color: '#fff' }}>
         Voice Calling Demo{' '}
       </h1>
-      {namePresent === '' || namePresent === null ? (
-        <>
-          <div className="container">
-            <div className="main-box">
-              <div className="myId">
-                <TextField
-                  id="filled-basic"
-                  label="Name"
-                  variant="filled"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  style={{ marginBottom: '20px' }}
-                />
 
-                <div className="call-button">
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={() => {
-                      setNamePresent(name)
-                      setUserName()
-                      localStorage.setItem('userName', name)
-                    }}>
-                    Submit
-                  </Button>
-                </div>
-              </div>
-              <div>
-                {/* {receivingCall && !callAccepted ? (
-                <div className="caller">
-                  <h1>
-                     incoming call</h1>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={answerCall}>
-                    Answer
-                  </Button>
-
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={declineCall}>
-                    Decline
-                  </Button>
-                </div>
-              ) : null} */}
-              </div>
+      <>
+        <div className="container">
+          <div className="main-box">
+            <div className="video-container">
+              <audio
+                playsInline
+                ref={remoteAudioRef}
+                autoPlay
+                style={{ width: '300px' }}
+              />
             </div>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="container">
-            <div className="main-box">
-              <div className="video-container">
-                {stream && (
+            <div className="myId">
+              <span className="text-center">
+                {/* Online members: {onlineUsersExceptMe.length} */}
+              </span>
+              <div className="call-button">
+                {/* Display online members count */}
+
+                {ongoingCall ? (
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    // onClick={leaveCall}
+                  >
+                    Skip Call
+                  </Button>
+                ) : (
                   <>
-                    <audio
-                      playsInline
-                      muted
-                      ref={myAudio}
-                      autoPlay
-                      style={{ width: '300px' }}
-                    />
-                    {ongoingCall && <h1>Ongoing call</h1>}
+                    <IconButton
+                      color="primary"
+                      aria-label="call"
+                      onClick={handleCallClick}>
+                      {isCalling ? (
+                        // Display a different icon or text when calling
+                        // For example, you can use a CircularProgress or other icon
+                        <>Calling...</>
+                      ) : (
+                        <>
+                          <PhoneIcon fontSize="large" />
+                          <p>Call</p>
+                        </>
+                      )}
+                    </IconButton>
                   </>
                 )}
-                {callAccepted && !callEnded ? (
-                  <>
-                    <audio
-                      playsInline
-                      ref={userAudio}
-                      autoPlay
-                      style={{ width: '300px' }}
-                    />
-                  </>
-                ) : null}
-              </div>
-              <div className="myId">
-                <TextField
-                  id="filled-basic"
-                  label="Name"
-                  variant="filled"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  style={{ marginBottom: '20px' }}
-                />
-                {/* <CopyToClipboard text={me} style={{ marginBottom: "2rem" }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<AssignmentIcon fontSize="large" />}
-                >
-                  Copy ID
-                </Button>
-              </CopyToClipboard> */}
-
-                {/* <TextField
-                id="filled-basic"
-                label="ID to call"
-                variant="filled"
-                value={idToCall}
-                onChange={(e) => setIdToCall(e.target.value)}
-              /> */}
-                <span className="text-center">
-                  Online members: {onlineUsersExceptMe.length}
-                </span>
-                <div className="call-button">
-                  {/* Display online members count */}
-
-                  {callAccepted && !callEnded ? (
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      onClick={leaveCall}>
-                      End Call
-                    </Button>
-                  ) : (
-                    <>
-                      <IconButton
-                        color="primary"
-                        aria-label="call"
-                        onClick={() => callUser()}>
-                        {isCalling ? (
-                          // Display a different icon or text when calling
-                          // For example, you can use a CircularProgress or other icon
-                          <>Calling...</>
-                        ) : (
-                          <>
-                            <PhoneIcon fontSize="large" />
-                            <p>Call</p>
-                          </>
-                        )}
-                      </IconButton>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div>
-                {receivingCall && !callAccepted ? (
-                  <div className="caller">
-                    <h1>
-                      {/* {callerName}  */}
-                      incoming calls
-                    </h1>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={answerCall}>
-                      Answer
-                    </Button>
-
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      onClick={declineCall}>
-                      Decline
-                    </Button>
-                  </div>
-                ) : null}
               </div>
             </div>
           </div>
-        </>
-      )}
+        </div>
+      </>
     </>
   )
 }
