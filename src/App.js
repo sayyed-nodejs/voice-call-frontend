@@ -97,6 +97,7 @@ function App() {
         })
       })
     }
+    // eslint-disable-next-line
   }, [localStream])
 
   return (
