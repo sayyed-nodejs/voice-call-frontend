@@ -6,8 +6,7 @@ import Peer from 'simple-peer'
 import io from 'socket.io-client'
 import './App.css'
 
-const socket = io.connect('https://voice-call-backend.onrender.com')
-// const socket = io.connect('http://localhost:4500')
+const socket = io.connect('http://localhost:4500')
 
 // const Peer = window.SimplePeer
 
@@ -50,11 +49,11 @@ function App() {
   useEffect(() => {
     // Listen for the "startCall" event from the server
     if (localStream) {
-      socket.on('startCall', otherUserId => {
-        console.log(`Starting call with:${otherUserId} by me ${me}`)
+      socket.on('startCall', ({ participants, otherUserId }) => {
+        console.log('participants[0]=== me', participants[0] === me)
         // Initialize simple-peer with socket.io
         const peer = new Peer({
-          initiator: true,
+          initiator: participants[0] === me,
           trickle: false,
           stream: localStream,
         })
@@ -67,6 +66,7 @@ function App() {
           console.log('SIGNAL inside peer', JSON.stringify(data))
           // Send signal to the other user
           socket.emit('signal', { signal: data, to: otherUserId })
+          console.log('peer.destroyed socket.on signal', peer.destroyed)
         })
 
         peer._debug = console.log
@@ -78,6 +78,8 @@ function App() {
           if (data.from === otherUserId && data.signal) {
             peer.signal(data.signal)
           }
+
+          console.log('peer.destroyed socket.on signal', peer.destroyed)
         })
 
         // Handle connection established
